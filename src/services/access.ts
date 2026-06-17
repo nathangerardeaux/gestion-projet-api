@@ -10,7 +10,7 @@ export interface ProjectRow extends RowDataPacket {
   created_at: string;
 }
 
-// Recupere le projet ou repond 404. TOUJOURS la premiere etape d'un controleur projet.
+// recupere le projet, ou 404 s'il n'existe pas
 export async function getProjectOr404(projectId: number): Promise<ProjectRow> {
   const [rows] = await pool.query<ProjectRow[]>(
     'SELECT id, title, description, owner_id, created_at FROM projects WHERE id = ?',
@@ -20,7 +20,6 @@ export async function getProjectOr404(projectId: number): Promise<ProjectRow> {
   return rows[0];
 }
 
-// L'utilisateur figure-t-il dans la table de jointure de ce projet ?
 export async function isMember(projectId: number, userId: number): Promise<boolean> {
   const [rows] = await pool.query<RowDataPacket[]>(
     'SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?',
@@ -29,15 +28,14 @@ export async function isMember(projectId: number, userId: number): Promise<boole
   return rows.length > 0;
 }
 
-// Lecture et actions sur les taches : proprietaire OU participant, sinon 403.
-// (Le proprietaire n'est pas duplique dans project_members : on teste les deux cas.)
+// proprietaire ou participant, sinon 403
 export async function requireMember(project: ProjectRow, userId: number): Promise<void> {
   if (project.owner_id === userId) return;
   if (await isMember(project.id, userId)) return;
   throw new ApiError(403, "Acces refuse : vous n'etes pas membre de ce projet");
 }
 
-// Modification du projet et gestion des participants : proprietaire uniquement, sinon 403.
+// proprietaire uniquement, sinon 403
 export function requireOwner(project: ProjectRow, userId: number): void {
   if (project.owner_id !== userId) {
     throw new ApiError(403, 'Acces refuse : seul le proprietaire peut faire cette action');

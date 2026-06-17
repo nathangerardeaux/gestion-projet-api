@@ -5,7 +5,7 @@ import { ApiError } from '../middlewares/error';
 import { AuthRequest } from '../middlewares/auth';
 import { getProjectOr404, isMember, requireMember } from '../services/access';
 
-// Les 3 statuts autorises (memes valeurs que l'ENUM en base).
+// les statuts possibles (= l'ENUM en base)
 const STATUSES = ['todo', 'in_progress', 'done'];
 
 interface TaskRow extends RowDataPacket {
@@ -18,7 +18,7 @@ interface TaskRow extends RowDataPacket {
   assignee_name: string | null;
 }
 
-// SELECT commun a toutes les lectures de taches : on joint users pour le nom de l'assigne.
+// jointure users pour recuperer le nom de l'assigne
 const TASK_SELECT = `
   SELECT t.id, t.project_id, t.title, t.description, t.status, t.assignee_id,
          u.name AS assignee_name
@@ -31,7 +31,6 @@ async function getTaskOr404(taskId: number): Promise<TaskRow> {
   return rows[0];
 }
 
-// Verification manuelle du titre/description d'une tache.
 function readTaskBody(body: any): { title: string; description: string } {
   const title = typeof body?.title === 'string' ? body.title.trim() : '';
   const description = typeof body?.description === 'string' ? body.description : '';
@@ -40,7 +39,6 @@ function readTaskBody(body: any): { title: string; description: string } {
   return { title, description };
 }
 
-// GET /api/projects/:id/tasks?status=... : liste, avec filtre optionnel (FT4).
 export async function listTasks(req: AuthRequest, res: Response) {
   const project = await getProjectOr404(Number(req.params.id));
   await requireMember(project, req.userId!);
@@ -65,7 +63,7 @@ export async function listTasks(req: AuthRequest, res: Response) {
   res.json(rows);
 }
 
-// POST /api/projects/:id/tasks : creation (statut 'todo' par defaut, gere par la base).
+// le statut 'todo' par defaut est gere par la base
 export async function createTask(req: AuthRequest, res: Response) {
   const project = await getProjectOr404(Number(req.params.id));
   await requireMember(project, req.userId!);
@@ -77,7 +75,6 @@ export async function createTask(req: AuthRequest, res: Response) {
   res.status(201).json(await getTaskOr404(result.insertId));
 }
 
-// PUT /api/tasks/:id : modifier titre et description.
 export async function updateTask(req: AuthRequest, res: Response) {
   const task = await getTaskOr404(Number(req.params.id));
   const project = await getProjectOr404(task.project_id);
@@ -91,7 +88,6 @@ export async function updateTask(req: AuthRequest, res: Response) {
   res.json(await getTaskOr404(task.id));
 }
 
-// PATCH /api/tasks/:id/status : changer le statut (FT4).
 export async function updateTaskStatus(req: AuthRequest, res: Response) {
   const task = await getTaskOr404(Number(req.params.id));
   const project = await getProjectOr404(task.project_id);
@@ -105,7 +101,6 @@ export async function updateTaskStatus(req: AuthRequest, res: Response) {
   res.json(await getTaskOr404(task.id));
 }
 
-// PATCH /api/tasks/:id/assignee : affecter ou desaffecter (FT6).
 export async function updateTaskAssignee(req: AuthRequest, res: Response) {
   const task = await getTaskOr404(Number(req.params.id));
   const project = await getProjectOr404(task.project_id);
@@ -117,7 +112,7 @@ export async function updateTaskAssignee(req: AuthRequest, res: Response) {
   }
 
   if (assigneeId !== null) {
-    // Regle metier FT6 : on ne peut affecter qu'a un membre du projet.
+    // on ne peut affecter qu'a un membre du projet
     const ok = assigneeId === project.owner_id || (await isMember(project.id, assigneeId));
     if (!ok) throw new ApiError(422, "Cet utilisateur n'est pas participant du projet");
   }
@@ -126,7 +121,6 @@ export async function updateTaskAssignee(req: AuthRequest, res: Response) {
   res.json(await getTaskOr404(task.id));
 }
 
-// DELETE /api/tasks/:id
 export async function deleteTask(req: AuthRequest, res: Response) {
   const task = await getTaskOr404(Number(req.params.id));
   const project = await getProjectOr404(task.project_id);

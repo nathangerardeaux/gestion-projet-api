@@ -13,7 +13,6 @@ interface UserRow extends RowDataPacket {
   name: string;
 }
 
-// POST /api/auth/login
 export async function login(req: AuthRequest, res: Response) {
   const email = req.body?.email;
   const password = req.body?.password;
@@ -40,7 +39,7 @@ export async function login(req: AuthRequest, res: Response) {
   res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
 }
 
-// GET /api/auth/me : permet au client de restaurer la session au rechargement.
+// restaure la session au rechargement (cote client)
 export async function me(req: AuthRequest, res: Response) {
   const [rows] = await pool.query<UserRow[]>(
     'SELECT id, email, name FROM users WHERE id = ?',

@@ -5,7 +5,7 @@ import { AuthRequest } from '../middlewares/auth';
 import { getProjectOr404, isMember, requireMember, requireOwner } from '../services/access';
 import { ApiError } from '../middlewares/error';
 
-// Petite verification manuelle du titre/description d'un projet.
+// verifie le titre et la description
 function readProjectBody(body: any): { title: string; description: string } {
   const title = typeof body?.title === 'string' ? body.title.trim() : '';
   const description = typeof body?.description === 'string' ? body.description : '';
@@ -14,7 +14,7 @@ function readProjectBody(body: any): { title: string; description: string } {
   return { title, description };
 }
 
-// GET /api/projects : tous les projets dont je suis proprietaire OU participant.
+// mes projets : proprietaire ou participant
 export async function listProjects(req: AuthRequest, res: Response) {
   const userId = req.userId!;
   const [rows] = await pool.query<RowDataPacket[]>(
@@ -28,7 +28,7 @@ export async function listProjects(req: AuthRequest, res: Response) {
   res.json(rows);
 }
 
-// POST /api/projects : creation ; le proprietaire, c'est MOI (id du jeton).
+// le proprietaire, c'est l'utilisateur du jeton
 export async function createProject(req: AuthRequest, res: Response) {
   const { title, description } = readProjectBody(req.body);
   const [result] = await pool.query<ResultSetHeader>(
@@ -38,14 +38,12 @@ export async function createProject(req: AuthRequest, res: Response) {
   res.status(201).json(await getProjectOr404(result.insertId));
 }
 
-// GET /api/projects/:id : lecture, reservee aux membres.
 export async function getProject(req: AuthRequest, res: Response) {
   const project = await getProjectOr404(Number(req.params.id));
   await requireMember(project, req.userId!);
   res.json(project);
 }
 
-// PUT /api/projects/:id : modification, reservee au proprietaire.
 export async function updateProject(req: AuthRequest, res: Response) {
   const project = await getProjectOr404(Number(req.params.id));
   requireOwner(project, req.userId!);
@@ -58,7 +56,6 @@ export async function updateProject(req: AuthRequest, res: Response) {
   res.json(await getProjectOr404(project.id));
 }
 
-// DELETE /api/projects/:id : suppression, reservee au proprietaire.
 export async function deleteProject(req: AuthRequest, res: Response) {
   const project = await getProjectOr404(Number(req.params.id));
   requireOwner(project, req.userId!);
@@ -66,7 +63,7 @@ export async function deleteProject(req: AuthRequest, res: Response) {
   res.status(204).end();
 }
 
-// GET /api/projects/:id/participants : proprietaire (is_owner=1) + participants (is_owner=0).
+// proprietaire (is_owner=1) + participants (is_owner=0)
 export async function listParticipants(req: AuthRequest, res: Response) {
   const project = await getProjectOr404(Number(req.params.id));
   await requireMember(project, req.userId!);
@@ -85,7 +82,6 @@ export async function listParticipants(req: AuthRequest, res: Response) {
   res.json(rows);
 }
 
-// POST /api/projects/:id/participants : ajout d'un utilisateur existant par son email.
 export async function addParticipant(req: AuthRequest, res: Response) {
   const project = await getProjectOr404(Number(req.params.id));
   requireOwner(project, req.userId!); // seul le proprietaire invite

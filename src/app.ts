@@ -8,19 +8,19 @@ import { errorHandler } from './middlewares/error';
 
 export const app = express();
 
-// --- Middlewares globaux ---
+// middlewares globaux
 app.use(cors({ origin: process.env.CLIENT_ORIGIN })); // seul le client declare est autorise
 app.use(express.json()); // parse les corps JSON -> req.body
 
-// --- Routes de l'API ---
+// routes
 app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/tasks', tasksRouter);
 
-// --- Toute URL non reconnue ci-dessus -> 404 JSON (TOUJOURS apres les routes) ---
+// 404 pour toute route inconnue
 app.use((_req, res) => {
   res.status(404).json({ error: 'Route inconnue' });
 });
 
-// --- Filet de securite final : la gestion centralisee des erreurs (TOUJOURS en dernier) ---
+// gestion des erreurs (en dernier)
 app.use(errorHandler);
